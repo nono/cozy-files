@@ -26,6 +26,13 @@ module.exports =
         get: files.downloadAttachment
     'files/photo/thumb/:fileid':
         get: files.photoThumb
+
+    # !!!!!!!!!!!!! CANCELATION TESTS BJA !!!!!!!!!!!!!
+    'files/photo/cancelation-test/:randomName':
+        get: files.cancelationTest
+    # !!!!!!!!!!!!! FIN TESTS BJA !!!!!!!!!!!!!
+
+
     'files/photo/screen/:fileid/:name':
         get: files.photoScreen
 

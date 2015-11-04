@@ -485,6 +485,424 @@ module.exports.photoThumb = (req, res, next) ->
         stream.abort()
 
     stream.pipe res
+
+
+
+###*
+ * test of cancelation of streams download
+ * id of a file with a thumb :     c2b0bd61b4a6a8567001369ffb0a0eba
+ * id of the corresponding thumb : c2b0bd61b4a6a8567001369ffb1d7ef3
+###
+module.exports.cancelationTest = (req, res, next) ->
+
+    console.log 'bon début !', req.params.randomName
+    fileID  = 'c2b0bd61b4a6a8567001369ffb0a0eba'
+    thumbID = 'c2b0bd61b4a6a8567001369ffb1d7ef3'
+    File.request 'all', key: fileID, (err, file) ->
+        if err or not file or file.length is 0
+            unless err?
+                err = new Error 'File not found'
+                err.status = 404
+                err.template =
+                    name: '404'
+                    params:
+                        localization: require '../lib/localization_manager'
+                        isPublic: req.url.indexOf('public') isnt -1
+            next err
+        else
+            req.file = file[0]
+            stream = req.file.getBinary 'thumb', (err) ->
+                if err
+                    console.log err
+                    next(err)
+                    stream.on 'data', () ->
+                    stream.on 'end', () ->
+                    stream.resume()
+                    return
+
+            req.on 'close', () ->
+                console.log "reQ.on close", req.params.randomName
+                # stream.destroy()
+                # stream.abort()
+
+            req.connection.on 'close', () ->
+                console.log 'reQ.connection.on close', req.params.randomName
+                # stream.destroy()
+                # stream.abort()
+
+            req.on 'end', () ->
+                console.log 'reQ.on end', req.params.randomName
+                res.end()
+                # stream.destroy()
+                # stream.abort()
+
+            res.on 'close', () ->
+                console.log "reS.on close", req.params.randomName
+                # stream.abort()
+                # stream.destroy()
+                # stream.abort()
+
+            res.connection.on 'close', () ->
+                console.log 'reS.connection.on close', req.params.randomName
+                # stream.destroy()
+                # stream.abort()
+
+            res.on 'end', () ->
+                console.log 'reS.on end', req.params.randomName
+                # stream.destroy()
+                # stream.abort()
+
+            stream.on 'close', () ->
+                console.log 'stream.on close', req.params.randomName
+                # stream.destroy()
+                # stream.abort()
+
+            stream.on 'end', () ->
+                console.log 'stream.on end', req.params.randomName
+                # stream.destroy()
+                # stream.abort()
+
+            stream.pipe res
+            # next()
+
+    # next()
+####
+# traces : ce qui est étonnant ce sont les fermetures en masse des connections très tardivement.
+# normal ?
+# GET /clearance/contacts 200 7.364 ms - 297
+# bon début ! 0.05164779396727681_1
+# bon début ! 0.05164779396727681_2
+# bon début ! 0.05164779396727681_3
+# bon début ! 0.05164779396727681_4
+# bon début ! 0.05164779396727681_5
+# bon début ! 0.05164779396727681_6
+# GET /files/photo/cancelation-test/0.05164779396727681_1 200 86.910 ms - -
+# reQ.on end 0.05164779396727681_1
+# bon début ! 0.05164779396727681_7
+# GET /files/photo/cancelation-test/0.05164779396727681_2 200 95.880 ms - -
+# reQ.on end 0.05164779396727681_2
+# bon début ! 0.05164779396727681_10
+# GET /files/photo/cancelation-test/0.05164779396727681_3 200 102.243 ms - -
+# reQ.on end 0.05164779396727681_3
+# bon début ! 0.05164779396727681_9
+# GET /files/photo/cancelation-test/0.05164779396727681_4 200 110.023 ms - -
+# reQ.on end 0.05164779396727681_4
+# bon début ! 0.05164779396727681_8
+# GET /files/photo/cancelation-test/0.05164779396727681_5 200 117.496 ms - -
+# reQ.on end 0.05164779396727681_5
+# bon début ! 0.04305103747174144_8
+# GET /files/photo/cancelation-test/0.05164779396727681_6 200 128.784 ms - -
+# reQ.on end 0.05164779396727681_6
+# bon début ! 0.04305103747174144_2
+# GET /files/photo/cancelation-test/0.05164779396727681_7 200 110.521 ms - -
+# reQ.on end 0.05164779396727681_7
+# GET /files/photo/cancelation-test/0.05164779396727681_10 200 115.870 ms - -
+# reQ.on end 0.05164779396727681_10
+# GET /files/photo/cancelation-test/0.05164779396727681_9 200 121.853 ms - -
+# reQ.on end 0.05164779396727681_9
+# GET /files/photo/cancelation-test/0.05164779396727681_8 200 126.277 ms - -
+# reQ.on end 0.05164779396727681_8
+# bon début ! 0.04305103747174144_1
+# GET /files/photo/cancelation-test/0.04305103747174144_8 200 121.608 ms - -
+# reQ.on end 0.04305103747174144_8
+# GET /files/photo/cancelation-test/0.04305103747174144_2 200 112.260 ms - -
+# reQ.on end 0.04305103747174144_2
+# bon début ! 0.04305103747174144_7
+# bon début ! 0.04305103747174144_9
+# bon début ! 0.04305103747174144_10
+# bon début ! 0.04305103747174144_4
+# bon début ! 0.04305103747174144_6
+# GET /files/photo/cancelation-test/0.04305103747174144_1 200 54.049 ms - -
+# reQ.on end 0.04305103747174144_1
+# bon début ! 0.04305103747174144_3
+# GET /files/photo/cancelation-test/0.04305103747174144_7 200 58.012 ms - -
+# reQ.on end 0.04305103747174144_7
+# bon début ! 0.04305103747174144_5
+# GET /files/photo/cancelation-test/0.04305103747174144_9 200 74.208 ms - -
+# reQ.on end 0.04305103747174144_9
+# bon début ! 0.34387736953794956_2
+# GET /files/photo/cancelation-test/0.04305103747174144_10 200 68.829 ms - -
+# reQ.on end 0.04305103747174144_10
+# GET /files/photo/cancelation-test/0.04305103747174144_4 200 74.532 ms - -
+# reQ.on end 0.04305103747174144_4
+# bon début ! 0.34387736953794956_8
+# GET /files/photo/cancelation-test/0.04305103747174144_6 200 106.495 ms - -
+# reQ.on end 0.04305103747174144_6
+# bon début ! 0.34387736953794956_10
+# GET /files/photo/cancelation-test/0.04305103747174144_3 200 107.667 ms - -
+# reQ.on end 0.04305103747174144_3
+# GET /files/photo/cancelation-test/0.34387736953794956_8 200 55.902 ms - -
+# reQ.on end 0.34387736953794956_8
+# bon début ! 0.34387736953794956_4
+# (node) warning: possible EventEmitter memory leak detected. 11 listeners added. Use emitter.setMaxListeners() to increase limit.
+# Trace
+#   at Socket.EventEmitter.addListener (events.js:160:15)
+#   at Socket.Readable.on (_stream_readable.js:689:33)
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/server/controllers/files.coffee:528:28
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/model.js:200:18
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/cozymodel.js:254:18
+#   at parseBody (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:75:10)
+#   at IncomingMessage.<anonymous> (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:109:14)
+#   at IncomingMessage.EventEmitter.emit (events.js:117:20)
+#   at _stream_readable.js:920:16
+#   at process._tickCallback (node.js:415:13)
+
+# GET /files/photo/cancelation-test/0.04305103747174144_5 200 113.996 ms - -
+# reQ.on end 0.04305103747174144_5
+# bon début ! 0.34387736953794956_7
+# GET /files/photo/cancelation-test/0.34387736953794956_2 200 97.625 ms - -
+# reQ.on end 0.34387736953794956_2
+# bon début ! 0.34387736953794956_5
+# bon début ! 0.34387736953794956_9
+# GET /files/photo/cancelation-test/0.34387736953794956_10 200 58.812 ms - -
+# reQ.on end 0.34387736953794956_10
+# bon début ! 0.34387736953794956_1
+# (node) warning: possible EventEmitter memory leak detected. 11 listeners added. Use emitter.setMaxListeners() to increase limit.
+# Trace
+#   at Socket.EventEmitter.addListener (events.js:160:15)
+#   at Socket.Readable.on (_stream_readable.js:689:33)
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/server/controllers/files.coffee:528:28
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/model.js:200:18
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/cozymodel.js:254:18
+#   at parseBody (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:75:10)
+#   at IncomingMessage.<anonymous> (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:109:14)
+#   at IncomingMessage.EventEmitter.emit (events.js:117:20)
+#   at _stream_readable.js:920:16
+#   at process._tickCallback (node.js:415:13)
+
+# bon début ! 0.34387736953794956_6
+# GET /files/photo/cancelation-test/0.34387736953794956_4 200 61.286 ms - -
+# reQ.on end 0.34387736953794956_4
+# (node) warning: possible EventEmitter memory leak detected. 11 listeners added. Use emitter.setMaxListeners() to increase limit.
+# Trace
+#   at Socket.EventEmitter.addListener (events.js:160:15)
+#   at Socket.Readable.on (_stream_readable.js:689:33)
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/server/controllers/files.coffee:528:28
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/model.js:200:18
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/cozymodel.js:254:18
+#   at parseBody (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:75:10)
+#   at IncomingMessage.<anonymous> (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:109:14)
+#   at IncomingMessage.EventEmitter.emit (events.js:117:20)
+#   at _stream_readable.js:920:16
+#   at process._tickCallback (node.js:415:13)
+
+# bon début ! 0.34387736953794956_3
+# (node) warning: possible EventEmitter memory leak detected. 11 listeners added. Use emitter.setMaxListeners() to increase limit.
+# Trace
+#   at Socket.EventEmitter.addListener (events.js:160:15)
+#   at Socket.Readable.on (_stream_readable.js:689:33)
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/server/controllers/files.coffee:528:28
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/model.js:200:18
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/cozymodel.js:254:18
+#   at parseBody (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:75:10)
+#   at IncomingMessage.<anonymous> (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:109:14)
+#   at IncomingMessage.EventEmitter.emit (events.js:117:20)
+#   at _stream_readable.js:920:16
+#   at process._tickCallback (node.js:415:13)
+
+# (node) warning: possible EventEmitter memory leak detected. 11 listeners added. Use emitter.setMaxListeners() to increase limit.
+# Trace
+#   at Socket.EventEmitter.addListener (events.js:160:15)
+#   at Socket.Readable.on (_stream_readable.js:689:33)
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/server/controllers/files.coffee:528:28
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/model.js:200:18
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/cozymodel.js:254:18
+#   at parseBody (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:75:10)
+#   at IncomingMessage.<anonymous> (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:109:14)
+#   at IncomingMessage.EventEmitter.emit (events.js:117:20)
+#   at _stream_readable.js:920:16
+#   at process._tickCallback (node.js:415:13)
+
+# GET /files/photo/cancelation-test/0.34387736953794956_5 200 86.696 ms - -
+# reQ.on end 0.34387736953794956_5
+# bon début ! 0.14664509519934654_1
+# GET /files/photo/cancelation-test/0.34387736953794956_7 200 97.256 ms - -
+# reQ.on end 0.34387736953794956_7
+# bon début ! 0.14664509519934654_2
+# GET /files/photo/cancelation-test/0.34387736953794956_9 200 90.165 ms - -
+# reQ.on end 0.34387736953794956_9
+# bon début ! 0.14664509519934654_3
+# (node) warning: possible EventEmitter memory leak detected. 11 listeners added. Use emitter.setMaxListeners() to increase limit.
+# Trace
+#   at Socket.EventEmitter.addListener (events.js:160:15)
+#   at Socket.Readable.on (_stream_readable.js:689:33)
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/server/controllers/files.coffee:528:28
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/model.js:200:18
+#   at /mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/lib/cozymodel.js:254:18
+#   at parseBody (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:75:10)
+#   at IncomingMessage.<anonymous> (/mnt/documents/Dev/code/cozy-vm-2/cozy-files/node_modules/cozydb/node_modules/request-json-light/main.js:109:14)
+#   at IncomingMessage.EventEmitter.emit (events.js:117:20)
+#   at _stream_readable.js:920:16
+#   at process._tickCallback (node.js:415:13)
+
+# GET /files/photo/cancelation-test/0.34387736953794956_1 200 134.859 ms - -
+# reQ.on end 0.34387736953794956_1
+# GET /files/photo/cancelation-test/0.34387736953794956_6 200 128.400 ms - -
+# reQ.on end 0.34387736953794956_6
+# GET /files/photo/cancelation-test/0.34387736953794956_3 200 119.538 ms - -
+# reQ.on end 0.34387736953794956_3
+# bon début ! 0.14664509519934654_4
+# bon début ! 0.14664509519934654_5
+# GET /files/photo/cancelation-test/0.14664509519934654_1 200 109.845 ms - -
+# reQ.on end 0.14664509519934654_1
+# bon début ! 0.14664509519934654_6
+# GET /files/photo/cancelation-test/0.14664509519934654_2 200 122.699 ms - -
+# reQ.on end 0.14664509519934654_2
+# GET /files/photo/cancelation-test/0.14664509519934654_3 200 130.155 ms - -
+# reQ.on end 0.14664509519934654_3
+# bon début ! 0.14664509519934654_7
+# GET /files/photo/cancelation-test/0.14664509519934654_4 200 75.185 ms - -
+# reQ.on end 0.14664509519934654_4
+# bon début ! 0.14664509519934654_8
+# bon début ! 0.14664509519934654_9
+# bon début ! 0.14664509519934654_10
+# GET /files/photo/cancelation-test/0.14664509519934654_5 200 79.877 ms - -
+# reQ.on end 0.14664509519934654_5
+# bon début ! 0.8786530492361635_1
+# GET /files/photo/cancelation-test/0.14664509519934654_6 200 87.371 ms - -
+# reQ.on end 0.14664509519934654_6
+# bon début ! 0.8786530492361635_2
+# GET /files/photo/cancelation-test/0.14664509519934654_7 200 85.309 ms - -
+# reQ.on end 0.14664509519934654_7
+# GET /files/photo/cancelation-test/0.14664509519934654_8 200 81.360 ms - -
+# reQ.on end 0.14664509519934654_8
+# bon début ! 0.8786530492361635_3
+# bon début ! 0.8786530492361635_4
+# GET /files/photo/cancelation-test/0.14664509519934654_9 200 87.177 ms - -
+# reQ.on end 0.14664509519934654_9
+# bon début ! 0.8786530492361635_5
+# GET /files/photo/cancelation-test/0.14664509519934654_10 200 114.373 ms - -
+# reQ.on end 0.14664509519934654_10
+# GET /files/photo/cancelation-test/0.8786530492361635_1 200 121.171 ms - -
+# reQ.on end 0.8786530492361635_1
+# GET /files/photo/cancelation-test/0.8786530492361635_3 200 81.213 ms - -
+# reQ.on end 0.8786530492361635_3
+# bon début ! 0.8786530492361635_6
+# GET /files/photo/cancelation-test/0.8786530492361635_2 200 130.415 ms - -
+# reQ.on end 0.8786530492361635_2
+# bon début ! 0.8786530492361635_7
+# bon début ! 0.8786530492361635_8
+# GET /files/photo/cancelation-test/0.8786530492361635_4 200 103.987 ms - -
+# reQ.on end 0.8786530492361635_4
+# bon début ! 0.8786530492361635_9
+# bon début ! 0.8786530492361635_10
+# GET /files/photo/cancelation-test/0.8786530492361635_6 200 74.226 ms - -
+# reQ.on end 0.8786530492361635_6
+# GET /files/photo/cancelation-test/0.8786530492361635_5 200 134.722 ms - -
+# reQ.on end 0.8786530492361635_5
+# GET /files/photo/cancelation-test/0.8786530492361635_7 200 91.787 ms - -
+# reQ.on end 0.8786530492361635_7
+# GET /files/photo/cancelation-test/0.8786530492361635_8 200 89.622 ms - -
+# reQ.on end 0.8786530492361635_8
+# GET /files/photo/cancelation-test/0.8786530492361635_9 200 78.168 ms - -
+# reQ.on end 0.8786530492361635_9
+# GET /files/photo/cancelation-test/0.8786530492361635_10 200 106.466 ms - -
+# reQ.on end 0.8786530492361635_10
+# reQ.connection.on close 0.05164779396727681_1
+# reS.connection.on close 0.05164779396727681_1
+# reQ.connection.on close 0.05164779396727681_7
+# reS.connection.on close 0.05164779396727681_7
+# reQ.connection.on close 0.04305103747174144_1
+# reS.connection.on close 0.04305103747174144_1
+# reQ.connection.on close 0.04305103747174144_3
+# reS.connection.on close 0.04305103747174144_3
+# reQ.connection.on close 0.34387736953794956_9
+# reS.connection.on close 0.34387736953794956_9
+# reQ.connection.on close 0.14664509519934654_3
+# reS.connection.on close 0.14664509519934654_3
+# reQ.connection.on close 0.14664509519934654_7
+# reS.connection.on close 0.14664509519934654_7
+# reQ.connection.on close 0.8786530492361635_3
+# reS.connection.on close 0.8786530492361635_3
+# reQ.connection.on close 0.8786530492361635_6
+# reS.connection.on close 0.8786530492361635_6
+# reQ.connection.on close 0.05164779396727681_3
+# reS.connection.on close 0.05164779396727681_3
+# reQ.connection.on close 0.05164779396727681_9
+# reS.connection.on close 0.05164779396727681_9
+# reQ.connection.on close 0.04305103747174144_9
+# reS.connection.on close 0.04305103747174144_9
+# reQ.connection.on close 0.34387736953794956_2
+# reS.connection.on close 0.34387736953794956_2
+# reQ.connection.on close 0.34387736953794956_5
+# reS.connection.on close 0.34387736953794956_5
+# reQ.connection.on close 0.14664509519934654_1
+# reS.connection.on close 0.14664509519934654_1
+# reQ.connection.on close 0.14664509519934654_9
+# reS.connection.on close 0.14664509519934654_9
+# reQ.connection.on close 0.8786530492361635_5
+# reS.connection.on close 0.8786530492361635_5
+# reQ.connection.on close 0.05164779396727681_2
+# reS.connection.on close 0.05164779396727681_2
+# reQ.connection.on close 0.05164779396727681_10
+# reS.connection.on close 0.05164779396727681_10
+# reQ.connection.on close 0.04305103747174144_7
+# reS.connection.on close 0.04305103747174144_7
+# reQ.connection.on close 0.04305103747174144_5
+# reS.connection.on close 0.04305103747174144_5
+# reQ.connection.on close 0.34387736953794956_6
+# reS.connection.on close 0.34387736953794956_6
+# reQ.connection.on close 0.14664509519934654_6
+# reS.connection.on close 0.14664509519934654_6
+# reQ.connection.on close 0.8786530492361635_2
+# reS.connection.on close 0.8786530492361635_2
+# reQ.connection.on close 0.8786530492361635_8
+# reS.connection.on close 0.8786530492361635_8
+# reQ.connection.on close 0.05164779396727681_6
+# reS.connection.on close 0.05164779396727681_6
+# reQ.connection.on close 0.04305103747174144_2
+# reS.connection.on close 0.04305103747174144_2
+# reQ.connection.on close 0.04305103747174144_6
+# reS.connection.on close 0.04305103747174144_6
+# reQ.connection.on close 0.34387736953794956_7
+# reS.connection.on close 0.34387736953794956_7
+# reQ.connection.on close 0.14664509519934654_2
+# reS.connection.on close 0.14664509519934654_2
+# reQ.connection.on close 0.14664509519934654_10
+# reS.connection.on close 0.14664509519934654_10
+# reQ.connection.on close 0.8786530492361635_7
+# reS.connection.on close 0.8786530492361635_7
+# reQ.connection.on close 0.05164779396727681_5
+# reS.connection.on close 0.05164779396727681_5
+# reQ.connection.on close 0.04305103747174144_8
+# reS.connection.on close 0.04305103747174144_8
+# reQ.connection.on close 0.04305103747174144_4
+# reS.connection.on close 0.04305103747174144_4
+# reQ.connection.on close 0.34387736953794956_10
+# reS.connection.on close 0.34387736953794956_10
+# reQ.connection.on close 0.34387736953794956_1
+# reS.connection.on close 0.34387736953794956_1
+# reQ.connection.on close 0.14664509519934654_5
+# reS.connection.on close 0.14664509519934654_5
+# reQ.connection.on close 0.8786530492361635_1
+# reS.connection.on close 0.8786530492361635_1
+# reQ.connection.on close 0.8786530492361635_9
+# reS.connection.on close 0.8786530492361635_9
+# reQ.connection.on close 0.05164779396727681_4
+# reS.connection.on close 0.05164779396727681_4
+# reQ.connection.on close 0.05164779396727681_8
+# reS.connection.on close 0.05164779396727681_8
+# reQ.connection.on close 0.04305103747174144_10
+# reS.connection.on close 0.04305103747174144_10
+# reQ.connection.on close 0.34387736953794956_8
+# reS.connection.on close 0.34387736953794956_8
+# reQ.connection.on close 0.34387736953794956_4
+# reS.connection.on close 0.34387736953794956_4
+# reQ.connection.on close 0.34387736953794956_3
+# reS.connection.on close 0.34387736953794956_3
+# reQ.connection.on close 0.14664509519934654_4
+# reS.connection.on close 0.14664509519934654_4
+# reQ.connection.on close 0.14664509519934654_8
+# reS.connection.on close 0.14664509519934654_8
+# reQ.connection.on close 0.8786530492361635_4
+# reS.connection.on close 0.8786530492361635_4
+# reQ.connection.on close 0.8786530492361635_10
+# reS.connection.on close 0.8786530492361635_10
+
+
+
+
+
 ###*
  * Returns "screens" (image reduced in ) for given file.
  * there is a bug : when the browser cancels many downloads, some are not

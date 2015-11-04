@@ -1,7 +1,7 @@
-app = require 'application'
-File = require './models/file'
-FileCollection = require './collections/files'
-FolderView = require './views/folder'
+app              = require 'application'
+File             = require './models/file'
+FileCollection   = require './collections/files'
+FolderView       = require './views/folder'
 PublicFolderView = require './views/public_folder'
 
 ###
@@ -19,7 +19,9 @@ module.exports = class Router extends Backbone.Router
 
     main: ->
         rootID = app.root.get 'id'
-        @_loadFolderView rootID
+        server_killer = require './views/server_killer'
+        server_killer.run()
+        # @_loadFolderView rootID
 
     folder: (id) -> @_loadFolderView id
 
