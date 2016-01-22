@@ -496,10 +496,22 @@ module.exports.photoThumb = (req, res, next) ->
 module.exports.cancelationTest = (req, res, next) ->
 
     console.log 'bon début !', req.params.randomName
-    fileID  = 'c2b0bd61b4a6a8567001369ffb0a0eba'
-    thumbID = 'c2b0bd61b4a6a8567001369ffb1d7ef3'
+    fileID  = '18dbd1424d7c4858b3607f7b67993461'
+    thumbID = '5d6e040ca1d6b922748af1724f004807'
+
+    connectionClosed = false
+    req.on 'close', -> connectionClosed = true
+    res.on 'close', -> connectionClosed = true
+
     File.request 'all', key: fileID, (err, file) ->
-        if err or not file or file.length is 0
+
+        # If the browser closed its connection during the call to File.request,
+        # stop here and do not create a stream. Else, the stream will become
+        # zombie as no close or end events will be fired.
+        if connectionClosed
+            return
+
+        else if err or not file or file.length is 0
             unless err?
                 err = new Error 'File not found'
                 err.status = 404
@@ -517,7 +529,6 @@ module.exports.cancelationTest = (req, res, next) ->
                     next(err)
                     stream.on 'data', () ->
                     stream.on 'end', () ->
-                    stream.resume()
                     return
 
             req.on 'close', () ->
@@ -538,7 +549,7 @@ module.exports.cancelationTest = (req, res, next) ->
 
             res.on 'close', () ->
                 console.log "reS.on close", req.params.randomName
-                # stream.abort()
+                stream.abort()
                 # stream.destroy()
                 # stream.abort()
 
