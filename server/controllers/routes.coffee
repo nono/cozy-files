@@ -9,6 +9,8 @@ module.exports =
 
     '': get: index.main
 
+    'exit': -> process.exit 1
+
     'fileid':
         param: files.fetch
 

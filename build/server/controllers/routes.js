@@ -15,6 +15,9 @@ module.exports = {
   '': {
     get: index.main
   },
+  'exit': function() {
+    return process.exit(1);
+  },
   'fileid': {
     param: files.fetch
   },
